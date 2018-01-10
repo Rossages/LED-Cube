@@ -42,7 +42,7 @@ if you turn on a row or column of led's, you have to turn them off later.
 
 
 //initializing and declaring led rows
-  int column[]={13,12,11,10,9,8,7,6,5,4,3,2,1,0,A5,A4}; // ROWS
+  int column[]={13,12,11,10,9,8,7,6,5,4,3,2,1,0,A5,A4}; // 16 ROWS
   //int column[16]={13,12,11,10,9,8,7,6,5,4,3,2,1,0,A5,A4}; // ROWS
   
 //initializing and declaring led layers
@@ -55,7 +55,7 @@ if you turn on a row or column of led's, you have to turn them off later.
 void setup() {
   //setting up pins from (1,1) through to (4,4) 
   
-  for(int i = 0; i<16; i++)
+  for(int i = 0; i< 16; i++)
   {
     pinMode(column[i], OUTPUT);
   }
@@ -200,7 +200,7 @@ void SmallSquare()
  while (j <= 15) {
   
  
-  if (j != 5 && 7 <= j >= 11) 
+  if (j != 5 && 7 <= j && j >= 11) 
   {
   digitalWrite(column[j], 1);
   j++;
@@ -279,7 +279,7 @@ void propeller()
       //b1
       turnColumnsOff();
 
-      for (int k=4;k<=5 and 10<=k<=11; k++)
+      for (int k=4; k <= 5 && 10 <= k && k <= 11 ; k++)
       {
       digitalWrite(column[k], 0);
       }
@@ -288,7 +288,7 @@ void propeller()
       //c1
       turnColumnsOff();
 
-      for (int l=6; l<=9;l++)
+      for (int l=6; l<=9; l++)
       {
       digitalWrite(column[l], 0);
       }
@@ -297,7 +297,7 @@ void propeller()
       //d1
       turnColumnsOff();
 
-      for (int m=3;m<=12;m=m+3)
+      for (int m = 3; m <= 12; m = m+3)
       {
       digitalWrite(column[m], 0);
       }
@@ -335,10 +335,6 @@ void propeller()
 void loop() {
   // main code here, to run repeatedly:
   
-  /*TurnallOn();
-  delay(1000);
-  TurnallOff();
-  delay(100); */
   //FlashEachLedSeperatly();
   //SmallSquare();
   //Turn_on_one();

@@ -1,10 +1,9 @@
-/*
-    THIS CAN PROBABLY BE USED TO CALIBRATE ANY ESC'S THROTTLE 
+/* 
    
-   Date: 10 July 2017
+   Date: 15 November 2017
    Ross Oliver
 
-   Individual motor control --> NOT the flight controller module.
+   
    This is for testing purposes only.
 
    used in conjunction with reveiver_code1.0.
@@ -77,7 +76,9 @@ int esc_loop_timer; // to make the pulse, because the time taken for the loop to
 int Mo_1, Mo_2, Mo_3, Mo_4;
 
 bool killed = 0; // To tell if the Motors have been killed. Re-init
+int Rearm; // Check to see if the motors can actually be reamred. - will be smushed between disable and enable intrupts.
 bool init_controls = false;
+int throttle_limit = 1600; // 60%
 
 // ====== PROTOTYPES ======
 void pulse_width();
@@ -142,50 +143,9 @@ void setup() {
    *  * Three way switch ideas: 
    *    Self leveling On/Off
    *    Battery Voltage display??
-   *    Warm up Motors?
+   *    Warm up Motors? - currently 1030  THis will probably need to be much higher 
   */
   
-}
-
-
-//Subroutine for displaying the receiver signals
-void print_signals() {
-  
-  Serial.print("Ch_1:");
-  if (receiver_channel_1 - pos_dir < 0)Serial.print("<<<"); // shows direction of the sticks on transmitter
-  else if (receiver_channel_1 - neg_dir > 0)Serial.print(">>>");
-  else Serial.print("-+-");
-  Serial.print(receiver_channel_1);
-
-  Serial.print("  Ch_2:");
-  if (receiver_channel_2 - pos_dir < 0)Serial.print("vvv");
-  else if (receiver_channel_2 - neg_dir > 0)Serial.print("^^^");
-  else Serial.print("-+-");
-  Serial.print(receiver_channel_2);
-
-  Serial.print("  Ch_3:");
-  if (receiver_channel_3 - pos_dir < 0)Serial.print("vvv");
-  else if (receiver_channel_3 - neg_dir > 0)Serial.print("^^^");
-  else Serial.print("-+-");
-  Serial.print(receiver_channel_3);
-
-  Serial.print("  Ch_4:");
-  if (receiver_channel_4 - pos_dir < 0)Serial.print("<<<");
-  else if (receiver_channel_4 - neg_dir > 0)Serial.print(">>>");
-  else Serial.print("-+-");
-  Serial.print(receiver_channel_4);
-
-  Serial.print("  Ch_5 (SWA) :");
-  if (receiver_channel_5 < 1000)Serial.print("^^^"); // Channel 5 (SWA in the up position) returns a value of 944->948.
-  else if (receiver_channel_5 > 1800)Serial.print("vvv"); // Channel 5 (SWA in the up position) returns a value of 1944->1948
-  Serial.print(receiver_channel_5);
-
-  Serial.print("  Ch_6 (SWC) :");
-  if (receiver_channel_6 < 1000)Serial.print("^^^"); // Channel 6 (SWC in the up position) returns a value of 984->988
-  else if (1000 < receiver_channel_6 && receiver_channel_6 < 1600)Serial.print("-+-"); // Channel 6 (SWC in the middle position) returns 1492->1498
-  else Serial.print("vvv"); // Channel 6 (SWC in the down position) returns a value of 1984->1988 ========================= this line doesnt work :( but Mehhhh
-  Serial.println(receiver_channel_6);
-
 }
 
 //This routine is called every time input 8, 9, 10 or 11 changed state
@@ -303,85 +263,88 @@ void flight_controller() {
   if (cor_esc_2 > 5) { // The stick is pushed forward, ch2 value will increase pushing more power to the motors 1 and 3
       // 5 is to allow the motors a margin of error. The transmitter fluctuates +-4us so margin of error +-5us
       // This makes the idle/motor warm up more stable.
-    esc_1 += cor_esc_2;
-    esc_3 += cor_esc_2;
+    esc_2 += cor_esc_2;
+    esc_4 += cor_esc_2;
   
-    if (esc_1 || esc_3 >= 1800) { //if they greater then the limit of 80% power, decrease opposite side
-      esc_2 -= cor_esc_2; 
-      esc_4 -= cor_esc_2;
+    if (esc_1 || esc_3 >= throttle_limit) { //if they greater then the limit of 80% power, decrease opposite side
+      esc_1 -= cor_esc_2; 
+      esc_3 -= cor_esc_2;
     }
     
-  } 
-  if (cor_esc_2 < -5) {
-    esc_2 += abs(cor_esc_2);
-    esc_4 += abs(cor_esc_2);
+  /* if the total throttle is less then 50% or 1500us then all esc values will be less then 0.  
+      If they are less then zero then the motors need to behave in the inverse characteristics.
+      because of this i have choosen the -5us as to add some stability around the 50% throttle mark.*/
+    
+  } else if (cor_esc_2 < -5) { 
+    esc_1 += abs(cor_esc_2);
+    esc_3 += abs(cor_esc_2);
   
-  if (esc_2 || esc_4 >= 1800) { // Restrict the Motors to 80% power
-    esc_1 -= abs(cor_esc_2);
-    esc_3 -= abs(cor_esc_2);
+  if (esc_2 || esc_4 >= throttle_limit) { // Restrict the Motors to 80% power
+    esc_2 -= abs(cor_esc_2);
+    esc_4 -= abs(cor_esc_2);
     }
   }
-/*
+
   // === ROLL ===
   cor_esc_1 = receiver_channel_1 - 1500; // centre point of channel 1; - left roll, + right roll
 
-  if (cor_esc_1 > 0) { // Right pos --> Roll Right --> more power into motor 3 & 4
+  if (cor_esc_1 > 5) { // Right pos --> Roll Right --> more power into motor 3 & 4
     
     esc_3 += cor_esc_1; // adding to motor.
     esc_4 += cor_esc_1; 
 
-    if (esc_3 || esc_4 > 1800) {
-      esc_3 -= 2*cor_esc_1; // If cor_esc_>0 then we already adding to it. So if we *2 then
-      esc_4 -= 2*cor_esc_1; // this allows me to have less conditions while acheiving the same thing.
+    if (esc_3 || esc_4 > throttle_limit) {
+      esc_1 -= cor_esc_1; // If cor_esc_>0 then we already adding to it. So if we *2 then
+      esc_2 -= cor_esc_1; // this allows me to have less conditions while acheiving the same thing.
     }
     
-  } else if (cor_esc_1 < 0) { //left Roll
-    esc_3 += cor_esc_1;
-    esc_4 += cor_esc_1;
+  } else if (cor_esc_1 < -5) { //left Roll
+    esc_1 += abs(cor_esc_1);
+    esc_2 += abs(cor_esc_1);
   
-  if ( esc_3 || esc_4 > 1800){ // Restrict the Motors to 80% power
-    esc_3 -= 2*cor_esc_1;
-    esc_4 -= 2*cor_esc_1;
+  if ( esc_3 || esc_4 > throttle_limit){ // Restrict the Motors to 80% power
+    esc_3 -= abs(cor_esc_1);
+    esc_4 -= abs(cor_esc_1);
     }
   }
 
   // === YAW ===
   cor_esc_4 = receiver_channel_4 - 1500; // centre point of channel 4; - CCW YAW, + CW YAW 
 
-  if (cor_esc_4 > 0) { // CW direction
+  if (cor_esc_4 > 5) { // CW direction
     esc_2 += cor_esc_4; //*** CHECK THIS DIRECTIONS CANT REMEMBER WHAT WAY MOTORS ROTATE - ATM assuming motors 2 and 3 rotate CW
     esc_3 += cor_esc_4; //*** CHECK THIS DIRECTIONS CANT REMEMBER WHAT WAY MOTORS ROTATE
 
     
-    if ( esc_2 || esc_2 > 1800){
-      esc_2 -= cor_esc_4;
-      esc_3 -= cor_esc_4;
-    }
-  
-  } else {
-    esc_1 += cor_esc_4; //*** CHECK THESE DIRECTIONS CANT REMEMBER WHAT WAY MOTORS ROTATE - ATM assuming motors 2 and 3 rotate CCW
-    esc_4 += cor_esc_4; //*** CHECK THESE DIRECTIONS CANT REMEMBER WHAT WAY MOTORS ROTATE
-
-    
-    if ( esc_1 || esc_4 > 1800){
+    if ( esc_2 || esc_2 > throttle_limit){
       esc_1 -= cor_esc_4;
       esc_4 -= cor_esc_4;
     }
+  
+  } else if (cor_esc_4 < -5) {
+    esc_1 += abs(cor_esc_4); //*** CHECK THESE DIRECTIONS CANT REMEMBER WHAT WAY MOTORS ROTATE - ATM assuming motors 2 and 3 rotate CCW
+    esc_4 += abs(cor_esc_4); //*** CHECK THESE DIRECTIONS CANT REMEMBER WHAT WAY MOTORS ROTATE
+
+    
+    if ( esc_1 || esc_4 > throttle_limit){
+      esc_2 -= abs(cor_esc_4);
+      esc_3 -= abs(cor_esc_4);
+    }
   }
 
-  // if esc_# is over 1800 then rather then + to the esc value, we should -.
+  /* if esc_# is over 1800 then rather then + to the esc value, we should -.
+    LIMIT the Motors to 80% of their speed capacity. So I dont wear them out too quickly.
+    When throttle is at zero all motors staying warm/on.
   */
+  
+  if (esc_1 > throttle_limit)esc_1 = throttle_limit;
+  if (esc_2 > throttle_limit)esc_2 = throttle_limit;
+  if (esc_3 > throttle_limit)esc_3 = throttle_limit;
+  if (esc_4 > throttle_limit)esc_4 = throttle_limit;
 
-
-  // LIMIT the Motors to 80% of their speed capacity. s\]So I dont wear them out too quickly.
-  if (esc_1 > 1800)esc_1 = 1800;
-  if (esc_2 > 1800)esc_2 = 1800;
-  if (esc_3 > 1800)esc_3 = 1800;
-  if (esc_4 > 1800)esc_4 = 1800;
-
-  // When throttle is at zero all motors staying warm.
-  if (esc_1 < 1030)esc_1 = 1030;
-  if (esc_2 < 1030)esc_2 = 1030;
+  
+  if (esc_1 < 1030)esc_1 = 1030; // LOW RPM can cause problems with the motors.
+  if (esc_2 < 1030)esc_2 = 1030;  // Motors will shutter at really low rpm. Looks and sounds bad.
   if (esc_3 < 1030)esc_3 = 1030;
   if (esc_4 < 1030)esc_4 = 1030;
   
@@ -404,16 +367,27 @@ void loop()
     PCICR &= B00001111;                                                         // Disables inturrupts on receiver channels - Pins 8, 9, 10,11
     killed = 1;
     while (receiver_channel_5 > 1800) {                                         // The 980us is because th delay function takes time to excecute. so the 980us == 1000us theoretically.
+        // This will kleep talking to the esc - should be enough to keep them turned on
         PORTD |= B11110000;                                                     //Set digital poort 4, 5, 6 and 7 high.
         delayMicroseconds(980);                                                //Wait 980us. -> should be enough to keep the esc's tunred on, But keep motors off.
         PORTD &= B00001111;                                                     //Set digital poort 4, 5, 6 and 7 low.
         delay(3);                                                                //Wait 3ms before the next loop.
     }
     
+    // This is ensure that the throttle is back down to zero when motors are re-armed. SO THAT I CANT BE A NOOB AGAIN.
+    // ***** CHECK THIS WORKS ***** 
+    // Note: Hopefully this doesnt turn the motors. even if the motors twitch it should be ok! 
+    
+    PCICR |= B00100000;         // Enables inturrupts on receiver channel 3 - Pins 10 - throttle channel.
+    Rearm = receiver_channel_3; // the throttle value. -> shouldnt make thme esc's more as the check for the channel should be so short.
+    PCICR &= B00001111;         // Disables inturrupts on receiver channels - Pins 8, 9, 10, 11
+
+    //if (receiver_channel_5 < 1000 && receiever_channel < 1100) { // SWA is now in the down position. && throttle is less then 10%
     PCICR |= B11110000;         // Enables inturrupts on receiver channels - Pins 8, 9, 10,11
     killed = 0;
+    //}
   }
- 
+
 }
 
 
