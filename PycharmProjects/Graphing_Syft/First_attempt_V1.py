@@ -50,6 +50,9 @@ class DataAbstraction:
         self.US_Prefilt_SP = info_string[21]
 
 
+# **** INIT STUFF ******
+
+
 processed_info_titles = []
 raw_values = []  # list that all of our data will be chucked into to temporarily
 j = 0
@@ -58,9 +61,16 @@ i = 0
 # init file as read only
 lenstext = open("LensMonitorLog-38927-with-L1-M.txt", "r")
 
+
+# init for the excel worksheet
+workbook = xlsxwriter.Workbook('hello.xlsx')
+worksheet = workbook.add_worksheet()
+
 # lines 0 -> 7
 heading_titles = ['Version', 'time_date', 'process', 'space', 'logdata', 'Varheader', 'lenses',
                   "Id"]  # titles for the first lines in the file.
+
+# ***********************
 
 
 def file_len(fname):
@@ -87,25 +97,29 @@ def read_samples(timestamp):
 # We have to reopen the text file ones it has been closed.
 lenstext = open("LensMonitorLog-38927-with-L1-M.txt", "r")
 
+
+
 for line in lenstext:
 
     if j <= 7:
         processed_info_titles.append((heading_titles[j] + "::" + line))
 
         if j == 6:
-            # this is the lens string.
-            # below makes the lens_titles a seperate list.
+            # this is the lens title string.
+            # below makes the lens_titles into a separate list.
+
             lens_titles = read_samples([line[4:]])  # 4: is to strip the D: from the list.
             # print("lens_titles: ", lens_titles[0])
             # print(len(lens_titles[0]))
 
+
         if j == 7:
-            # this is for the funny title things.
+            # this is for the funny title things (ID: and shit).
             funny_titles = read_samples([line[3:]])  # 3: is to strip the D: from the list.
             # this guy also give us time(ms) title.
             # print(funny_titles)
 
-    if 8 <= j <= 16:  # TODO: change this for proper test to num_lines
+    if 8 <= j <= num_lines:  # TODO: change this for proper test to num_lines
 
         # This is where all the good important data comes from.
         raw_values.append(line[3:])  # this will strip the D: off all of the data points.( and makes a copy of item)
@@ -121,22 +135,79 @@ for line in lenstext:
 
     j += 1  # this will increment j after ever time line in lenstext is incremented
 
+
+# ***** Plotting the lense titles. ******
+lens_titles = lens_titles[0] # unfortunately this is bit of a hack. but ah well
+row1 = 0
+
+for index, item in enumerate(lens_titles):
+    lenstemp = lens_titles[index]
+    worksheet.write(row1, index+1, lenstemp)
+
+meh = funny_titles[0]
+worksheet.write(row1, row1, meh[0])
+# **************************
+
+
+
 # ******* From here we will take individual parts of the data so that they can be plotted. *********
 time_measured = []
+US_Lens1_ActualV = []
+
+col = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
+
 
 for index, item in enumerate(time_stamped_info):
     # from here we can take away one lot of lists.
     # this will feed a new string each itteration to the class.
 
     temptime = time_stamped_info[index]  # this is for all the different lists. ie. Time(ms)
-    measurements = DataAbstraction(temptime[0]) # passed into Class to be analysed.
-    time_measured.append(measurements.time) # this line just for testing...
+    measurements = DataAbstraction(temptime[0])  # passed into Class to be analysed.
 
+    # time_measured.append(measurements.time)  # this line just for testing...
+    # US_Lens1_ActualV.append(measurements.US_L1_AV)
+    rindex = index + 2
+    # starting from index +2 so that there is some room between titles and numbers.
+    worksheet.write(rindex, col[0], measurements.time)
+    worksheet.write(rindex, col[1], measurements.US_L1_AA)
+    worksheet.write(rindex, col[2], measurements.US_L1_AV)
+    worksheet.write(rindex, col[3], measurements.US_L1_SP)
+
+    worksheet.write(rindex, col[4], measurements.US_L2_AA)
+    worksheet.write(rindex, col[5], measurements.US_L2_AV)
+    worksheet.write(rindex, col[6], measurements.US_L2_SP)
+
+    worksheet.write(rindex, col[7], measurements.US_L3_AA)
+    worksheet.write(rindex, col[8], measurements.US_L3_AV)
+    worksheet.write(rindex, col[9], measurements.US_L3_SP)
+
+    worksheet.write(rindex, col[10], measurements.US_L4_AA)
+    worksheet.write(rindex, col[11], measurements.US_L4_AV)
+    worksheet.write(rindex, col[12], measurements.US_L4_SP)
+
+    worksheet.write(rindex, col[13], measurements.US_L5_AA)
+    worksheet.write(rindex, col[14], measurements.US_L5_AV)
+    worksheet.write(rindex, col[15], measurements.US_L5_SP)
+
+    worksheet.write(rindex, col[16], measurements.US_L6_AA)
+    worksheet.write(rindex, col[17], measurements.US_L6_AV)
+    worksheet.write(rindex, col[18], measurements.US_L6_SP)
+
+    worksheet.write(rindex, col[19], measurements.US_Prefilt_AA)
+    worksheet.write(rindex, col[20], measurements.US_Prefilt_AV)
+    worksheet.write(rindex, col[21], measurements.US_Prefilt_SP)
+
+
+
+
+workbook.close()
 
 # below line will be replaced by the class indexing :)
 # blah = testing[1]  # at this stage i can actually abstract data from the list
 
-print("time_stamped", time_measured)
+#print("time_stamped", time_measured)
+#print("US_Lens1_ActualV ", US_Lens1_ActualV)
+print(lens_titles)
 # print("t :", time.US_L1_AA)
 # print("Num lines ", num_lines)
 # print("\n")
