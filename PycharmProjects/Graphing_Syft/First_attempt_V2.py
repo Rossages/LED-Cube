@@ -3,9 +3,31 @@
 import xlsxwriter  # this is imported to use the Excel library.
 import sys  # this is used to get the size of the data string, or see what data type something is.
 
+# **** INIT STUFF ******
+
+
+processed_info_titles = []
+raw_values = []  # list that all of our data will be chucked into to temporarily
+j = 0
+i = 0
+
+# init file as read only
+lenstext = open("LensMonitorLog-38927-with-L1-M.txt", "r")
+
+
+# init for the excel worksheet
+workbook = xlsxwriter.Workbook('Combined_data.xlsx')
+worksheet = workbook.add_worksheet()
+
+# lines 0 -> 7
+heading_titles = ['Version', 'time_date', 'process', 'space', 'logdata', 'Varheader', 'lenses',
+                  "Id"]  # titles for the first lines in the file.
+
+# ***********************
 
 # this following class will be used to abstract the data from each string i a tidy way.
 # all of the indexing will be done with in this class.
+
 
 class DataAbstraction:
     def __init__(self, info_string):
@@ -50,28 +72,6 @@ class DataAbstraction:
         self.US_Prefilt_SP = info_string[21]
 
 
-# **** INIT STUFF ******
-
-
-processed_info_titles = []
-raw_values = []  # list that all of our data will be chucked into to temporarily
-j = 0
-i = 0
-
-# init file as read only
-lenstext = open("LensMonitorLog-38927-with-L1-M.txt", "r")
-
-
-# init for the excel worksheet
-workbook = xlsxwriter.Workbook('hello.xlsx')
-worksheet = workbook.add_worksheet()
-
-# lines 0 -> 7
-heading_titles = ['Version', 'time_date', 'process', 'space', 'logdata', 'Varheader', 'lenses',
-                  "Id"]  # titles for the first lines in the file.
-
-# ***********************
-
 
 def file_len(fname):
     with fname as f:
@@ -89,10 +89,11 @@ time_stamped_info = []
 def read_samples(timestamp):
     # this will take the string and strip all of the \t and give actual information to be processed
     # which will have all the individual values in a list.
-
     temp = list(map(lambda x: x.split("\t"), timestamp))
     return temp
 
+
+print("Starting the .Text File.. Num measurements: ", num_lines)
 
 # We have to reopen the text file ones it has been closed.
 lenstext = open("LensMonitorLog-38927-with-L1-M.txt", "r")
@@ -100,7 +101,6 @@ lenstext = open("LensMonitorLog-38927-with-L1-M.txt", "r")
 
 
 for line in lenstext:
-
     if j <= 7:
         processed_info_titles.append((heading_titles[j] + "::" + line))
 
@@ -136,7 +136,7 @@ for line in lenstext:
     j += 1  # this will increment j after ever time line in lenstext is incremented
 
 
-# ***** Plotting the lense titles. ******
+# ***** Plotting the lens titles. ******
 
 lens_titles = lens_titles[0] # unfortunately this is bit of a hack. but ah well
 row1 = 0
@@ -200,6 +200,48 @@ for index, item in enumerate(time_stamped_info):
     worksheet.write(rindex, col[21], measurements.US_Prefilt_SP)
 
 
+print("Text file finished")
+
+# ************ TRACE FILE READING ***************************
+
+# init file as read only
+tracetext = open("SIM negative wet-38927-20171114-155926.trace", "r")
+proc_info = []
+
+print("Starting Trace file..")
+
+for line in tracetext:
+    proc_info.append(line.split(","))
+
+#  these are the titles from the trace file.
+trace_titles = proc_info[0]
+row1 = 0
+
+offset = len(lens_titles) + 4  # this will allow 4 spaces seperating the two data sets.
+
+for index, item in enumerate(trace_titles):
+    tracetemp = trace_titles[index]
+    worksheet.write(row1, (index + offset), tracetemp)
+
+proc_temp = []
+
+tracetext.seek(0)
+
+
+for index1, itemlist in enumerate(proc_info):
+
+    time_pos = proc_info[index1]
+
+    if index1 > 0:
+        for sideside, item2 in enumerate(time_pos):
+            # below will write column per column
+            # print(sideside, item2)
+            worksheet.write(index1+1, (sideside + offset),  item2)
+        #print(time_pos)
+
+
+print("Wooh Almost Done the .Trace File")
+
 workbook.close()
 
 # below line will be replaced by the class indexing :)
@@ -207,7 +249,7 @@ workbook.close()
 
 #print("time_stamped", time_measured)
 #print("US_Lens1_ActualV ", US_Lens1_ActualV)
-print(lens_titles)
+#print(lens_titles)
 # print("t :", time.US_L1_AA)
 # print("Num lines ", num_lines)
 # print("\n")
